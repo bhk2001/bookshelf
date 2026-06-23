@@ -436,15 +436,26 @@ window.closeDetail = () => window.switchView(prevView);
 
 document.getElementById('search-input').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 
+const NAVER_PROXY = 'https://bookshelf-proxy.bhkim7180.workers.dev';
+const GOOGLE_KEY = 'AIzaSyDsDRQ7zRtUT65sRgwOluJx_e0r4hfMdG4';
+const PAGE_SIZE = 10;
+
 let searchQuery = '';
-let searchStartIndex = 0;
-const SEARCH_PAGE_SIZE = 10;
+let searchStartIndex = 0; // Google용
+let naverStart = 1;       // 네이버용 (1부터 시작)
+let useNaver = false;
+
+function isKorean(text) {
+  return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text);
+}
 
 async function doSearch() {
   const q = document.getElementById('search-input').value.trim();
   if(!q) return;
   searchQuery = q;
   searchStartIndex = 0;
+  naverStart = 1;
+  useNaver = isKorean(q);
   document.getElementById('search-results').innerHTML = '';
   await fetchResults(true);
 }
@@ -452,7 +463,6 @@ async function doSearch() {
 async function fetchResults(isNew) {
   const st = document.getElementById('search-status');
   const res = document.getElementById('search-results');
-  // remove old more-btn if exists
   const oldBtn = document.getElementById('more-btn');
   if(oldBtn) oldBtn.remove();
 
@@ -460,50 +470,104 @@ async function fetchResults(isNew) {
   st.textContent = isNew ? '검색 중…' : '불러오는 중…';
 
   try {
-    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=${SEARCH_PAGE_SIZE}&startIndex=${searchStartIndex}&key=AIzaSyDsDRQ7zRtUT65sRgwOluJx_e0r4hfMdG4`);
-    if(!r.ok){ st.textContent=`오류: ${r.status}`; return; }
-    const d = await r.json();
-    if(!d.items||!d.items.length){
-      st.textContent = isNew ? '검색 결과가 없어요.' : '더 이상 결과가 없어요.';
-      return;
-    }
-    const total = d.totalItems || 0;
-    searchStartIndex += d.items.length;
-    st.textContent = `전체 약 ${total.toLocaleString()}권 중 ${searchStartIndex}권 표시`;
+    let items = [], total = 0;
 
-    const html = d.items.map(item=>{
-      const info = item.volumeInfo||{};
-      const thumb = (info.imageLinks?.thumbnail||'').replace('http:','https:');
-      const title = info.title||'제목 없음';
-      const author = (info.authors||[]).join(', ')||'저자 미상';
-      const year = (info.publishedDate||'').slice(0,4);
-      const inShelf = shelf.some(b=>b.gid===item.id);
-      const inWish = wishlist.some(b=>b.gid===item.id);
-      const te=encodeURIComponent(title),ae=encodeURIComponent(author),the=encodeURIComponent(thumb);
-      return `<div class="result-card">
-        <div class="result-thumb">${thumb?`<img src="${thumb}" alt="표지" loading="lazy">`:'<div class="no-img">📖</div>'}</div>
-        <div class="result-meta">
-          <div class="result-title">${esc(title)}</div>
-          <div class="result-author">${esc(author)}</div>
-          <div class="result-year">${year}</div>
-        </div>
-        <div class="result-btns">
-          <button class="add-btn" ${inShelf?'disabled':''} onclick="addBook(this,'${item.id}','${te}','${ae}','${year}','${the}')">${inShelf?'읽음':'+ 읽었어요'}</button>
-          <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWish(this,'${item.id}','${te}','${ae}','${year}','${the}')">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
-        </div>
-      </div>`;
-    }).join('');
-    res.insertAdjacentHTML('beforeend', html);
+    if(useNaver) {
+      // 네이버 책 API
+      const r = await fetch(`${NAVER_PROXY}?q=${encodeURIComponent(searchQuery)}&start=${naverStart}&display=${PAGE_SIZE}`);
+      if(!r.ok){ st.textContent=`오류: ${r.status}`; return; }
+      const d = await r.json();
+      if(!d.items||!d.items.length){
+        st.textContent = isNew ? '검색 결과가 없어요.' : '더 이상 결과가 없어요.';
+        return;
+      }
+      total = d.total || 0;
+      naverStart += d.items.length;
+      st.textContent = `전체 약 ${total.toLocaleString()}권 중 ${naverStart-1}권 표시`;
 
-    // show more button if more results exist
-    if(searchStartIndex < total) {
-      const btn = document.createElement('button');
-      btn.id = 'more-btn';
-      btn.textContent = `더 보기 (${(total - searchStartIndex).toLocaleString()}권 남음)`;
-      btn.style.cssText = 'width:100%;padding:13px;margin-top:10px;background:none;border:1px solid var(--border2);color:var(--cream2);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px';
-      btn.onclick = () => fetchResults(false);
-      res.after(btn);
+      items = d.items.map(item => {
+        const thumb = (item.image||'').replace('http:','https:');
+        const title = item.title?.replace(/<[^>]+>/g,'') || '제목 없음';
+        const author = item.author?.replace(/<[^>]+>/g,'') || '저자 미상';
+        const year = (item.pubdate||'').slice(0,4);
+        const id = 'naver_' + encodeURIComponent(item.isbn||title);
+        const inShelf = shelf.some(b=>b.gid===id);
+        const inWish = wishlist.some(b=>b.gid===id);
+        const te=encodeURIComponent(title),ae=encodeURIComponent(author),the=encodeURIComponent(thumb);
+        return `<div class="result-card">
+          <div class="result-thumb">${thumb?`<img src="${thumb}" alt="표지" loading="lazy">`:'<div class="no-img">📖</div>'}</div>
+          <div class="result-meta">
+            <div class="result-title">${esc(title)}</div>
+            <div class="result-author">${esc(author)}</div>
+            <div class="result-year">${year}</div>
+          </div>
+          <div class="result-btns">
+            <button class="add-btn" ${inShelf?'disabled':''} onclick="addBook(this,'${id}','${te}','${ae}','${year}','${the}')">${inShelf?'읽음':'+ 읽었어요'}</button>
+            <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWish(this,'${id}','${te}','${ae}','${year}','${the}')">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
+          </div>
+        </div>`;
+      });
+
+      if(naverStart-1 < total) {
+        const btn = document.createElement('button');
+        btn.id = 'more-btn';
+        btn.textContent = `더 보기 (${(total-(naverStart-1)).toLocaleString()}권 남음)`;
+        btn.style.cssText = 'width:100%;padding:13px;margin-top:10px;background:none;border:1px solid var(--border2);color:var(--cream2);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px';
+        btn.onclick = () => fetchResults(false);
+        res.insertAdjacentHTML('beforeend', items.join(''));
+        res.after(btn);
+        return;
+      }
+
+    } else {
+      // Google Books API
+      const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=${PAGE_SIZE}&startIndex=${searchStartIndex}&key=${GOOGLE_KEY}`);
+      if(!r.ok){ st.textContent=`오류: ${r.status}`; return; }
+      const d = await r.json();
+      if(!d.items||!d.items.length){
+        st.textContent = isNew ? '검색 결과가 없어요.' : '더 이상 결과가 없어요.';
+        return;
+      }
+      total = d.totalItems || 0;
+      searchStartIndex += d.items.length;
+      st.textContent = `전체 약 ${total.toLocaleString()}권 중 ${searchStartIndex}권 표시`;
+
+      items = d.items.map(item=>{
+        const info = item.volumeInfo||{};
+        const thumb = (info.imageLinks?.thumbnail||'').replace('http:','https:');
+        const title = info.title||'제목 없음';
+        const author = (info.authors||[]).join(', ')||'저자 미상';
+        const year = (info.publishedDate||'').slice(0,4);
+        const inShelf = shelf.some(b=>b.gid===item.id);
+        const inWish = wishlist.some(b=>b.gid===item.id);
+        const te=encodeURIComponent(title),ae=encodeURIComponent(author),the=encodeURIComponent(thumb);
+        return `<div class="result-card">
+          <div class="result-thumb">${thumb?`<img src="${thumb}" alt="표지" loading="lazy">`:'<div class="no-img">📖</div>'}</div>
+          <div class="result-meta">
+            <div class="result-title">${esc(title)}</div>
+            <div class="result-author">${esc(author)}</div>
+            <div class="result-year">${year}</div>
+          </div>
+          <div class="result-btns">
+            <button class="add-btn" ${inShelf?'disabled':''} onclick="addBook(this,'${item.id}','${te}','${ae}','${year}','${the}')">${inShelf?'읽음':'+ 읽었어요'}</button>
+            <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWish(this,'${item.id}','${te}','${ae}','${year}','${the}')">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
+          </div>
+        </div>`;
+      });
+
+      if(searchStartIndex < total) {
+        const btn = document.createElement('button');
+        btn.id = 'more-btn';
+        btn.textContent = `더 보기 (${(total-searchStartIndex).toLocaleString()}권 남음)`;
+        btn.style.cssText = 'width:100%;padding:13px;margin-top:10px;background:none;border:1px solid var(--border2);color:var(--cream2);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px';
+        btn.onclick = () => fetchResults(false);
+        res.insertAdjacentHTML('beforeend', items.join(''));
+        res.after(btn);
+        return;
+      }
     }
+
+    res.insertAdjacentHTML('beforeend', items.join(''));
   } catch(e) { st.textContent=`오류: ${e.message}`; }
 }
 window.doSearch = doSearch;
