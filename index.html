@@ -451,12 +451,15 @@ function isKorean(text) {
   return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text);
 }
 
+let resultData = [];
+
 async function doSearch() {
   const q = document.getElementById('search-input').value.trim();
   if(!q) return;
   searchQuery = q;
   searchStartIndex = 0;
   naverStart = 1;
+  resultData = [];
   useNaver = isKorean(q);
   document.getElementById('search-results').innerHTML = '';
   await fetchResults(true);
@@ -497,7 +500,8 @@ async function fetchResults(isNew) {
         const inShelf = shelf.some(b=>b.gid===id);
         const inWish = wishlist.some(b=>b.gid===id);
         const link = item.link||'';
-        const te=encodeURIComponent(title),ae=encodeURIComponent(author),the=encodeURIComponent(thumb),le=encodeURIComponent(link);
+        const idx2 = resultData.length;
+        resultData.push({id,title,author,year,thumb,link});
         return `<div class="result-card">
           <div class="result-thumb">${thumb?`<img src="${thumb}" alt="표지" loading="lazy">`:'<div class="no-img">📖</div>'}</div>
           <div class="result-meta">
@@ -506,8 +510,8 @@ async function fetchResults(isNew) {
             <div class="result-year">${year}</div>
           </div>
           <div class="result-btns">
-            <button class="add-btn" ${inShelf?'disabled':''} onclick="addBook(this,'${id}','${te}','${ae}','${year}','${the}')">${inShelf?'읽음':'+ 읽었어요'}</button>
-            <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWish(this,'${id}','${te}','${ae}','${year}','${the}','${le}')">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
+            <button class="add-btn" ${inShelf?'disabled':''} onclick="addBookIdx(this,${idx2})">${inShelf?'읽음':'+ 읽었어요'}</button>
+            <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWishIdx(this,${idx2})">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
           </div>
         </div>`;
       });
@@ -544,7 +548,8 @@ async function fetchResults(isNew) {
         const year = (info.publishedDate||'').slice(0,4);
         const inShelf = shelf.some(b=>b.gid===item.id);
         const inWish = wishlist.some(b=>b.gid===item.id);
-        const te=encodeURIComponent(title),ae=encodeURIComponent(author),the=encodeURIComponent(thumb);
+        const idx2 = resultData.length;
+        resultData.push({id:item.id,title,author,year,thumb,link:''});
         return `<div class="result-card">
           <div class="result-thumb">${thumb?`<img src="${thumb}" alt="표지" loading="lazy">`:'<div class="no-img">📖</div>'}</div>
           <div class="result-meta">
@@ -553,8 +558,8 @@ async function fetchResults(isNew) {
             <div class="result-year">${year}</div>
           </div>
           <div class="result-btns">
-            <button class="add-btn" ${inShelf?'disabled':''} onclick="addBook(this,'${item.id}','${te}','${ae}','${year}','${the}')">${inShelf?'읽음':'+ 읽었어요'}</button>
-            <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWish(this,'${item.id}','${te}','${ae}','${year}','${the}')">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
+            <button class="add-btn" ${inShelf?'disabled':''} onclick="addBookIdx(this,${idx2})">${inShelf?'읽음':'+ 읽었어요'}</button>
+            <button class="wish-add-btn" ${inWish||inShelf?'disabled':''} onclick="addWishIdx(this,${idx2})">${inWish?'찜됨':inShelf?'찜됨':'🔖 찜'}</button>
           </div>
         </div>`;
       });
@@ -580,6 +585,25 @@ window.addBook = async (btn,id,title,author,year,thumb) => {
   await persistBook(book);
   await removeWish(id).catch(()=>{});
   toast('책장에 추가됐어요 📚');
+};
+
+window.addBookIdx = async (btn, idx) => {
+  const d = resultData[idx];
+  if(!d) return;
+  btn.disabled=true; btn.textContent='읽음';
+  const book = {gid:d.id,title:d.title,author:d.author,year:d.year,thumb:d.thumb,r:0,note:'',readDate:'',addedAt:Date.now()};
+  await persistBook(book);
+  await removeWish(d.id).catch(()=>{});
+  toast('책장에 추가됐어요 📚');
+};
+
+window.addWishIdx = async (btn, idx) => {
+  const d = resultData[idx];
+  if(!d) return;
+  btn.disabled=true; btn.textContent='찜됨';
+  const book = {gid:d.id,title:d.title,author:d.author,year:d.year,thumb:d.thumb,link:d.link||'',addedAt:Date.now()};
+  await persistWish(book);
+  toast('읽을 책에 추가됐어요 🔖');
 };
 
 window.addWish = async (btn,id,title,author,year,thumb,link='') => {
