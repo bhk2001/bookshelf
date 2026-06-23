@@ -357,11 +357,12 @@ function renderShelf() {
   let html = '';
   if(reading.length) {
     html += `<div class="shelf-section-label">📖 읽고 있는 책 (${reading.length}권)</div>`;
-    html += `<div class="shelf-grid">${reading.map((b,i) => {
+    html += '<div class="shelf-grid">';
+    reading.forEach(b => {
       const realIdx = shelf.indexOf(b);
-      return `<div class="shelf-card" onclick="openDetail(${realIdx})">
+      html += `<div class="shelf-card" onclick="openDetail(${realIdx})">
         <div class="shelf-card-img">
-          ${b.thumb?`<img src="${b.thumb}" alt="표지" loading="lazy">`:'<div class="no-cover">📖</div>'}
+          ${b.thumb ? '<img src="' + b.thumb + '" alt="표지" loading="lazy">' : '<div class="no-cover">📖</div>'}
           <div class="reading-badge">읽는 중</div>
         </div>
         <div class="shelf-card-body">
@@ -369,24 +370,27 @@ function renderShelf() {
           <div class="shelf-card-author">${esc(b.author)}</div>
         </div>
       </div>`;
-    }).join('')}</div>`;
+    });
+    html += '</div>';
   }
   if(read.length) {
     html += `<div class="shelf-section-label">✅ 읽은 책 (${read.length}권)</div>`;
-    html += `<div class="shelf-grid">${read.map((b,i) => {
+    html += '<div class="shelf-grid">';
+    read.forEach(b => {
       const realIdx = shelf.indexOf(b);
-      return `<div class="shelf-card" onclick="openDetail(${realIdx})">
+      html += `<div class="shelf-card" onclick="openDetail(${realIdx})">
         <div class="shelf-card-img">
-          ${b.thumb?`<img src="${b.thumb}" alt="표지" loading="lazy">`:'<div class="no-cover">📖</div>'}
-          ${b.r?`<div class="rating-badge">★ ${b.r}</div>`:''}
+          ${b.thumb ? '<img src="' + b.thumb + '" alt="표지" loading="lazy">' : '<div class="no-cover">📖</div>'}
+          ${b.r ? '<div class="rating-badge">★ ' + b.r + '</div>' : ''}
         </div>
         <div class="shelf-card-body">
           <div class="shelf-card-title">${esc(b.title)}</div>
           <div class="shelf-card-author">${esc(b.author)}</div>
-          ${b.readDate?`<div class="shelf-card-date">${b.readDate}</div>`:''}
+          ${b.readDate ? '<div class="shelf-card-date">' + b.readDate + '</div>' : ''}
         </div>
       </div>`;
-    }).join('')}</div>`;
+    });
+    html += '</div>';
   }
   grid.innerHTML = html;
 }
