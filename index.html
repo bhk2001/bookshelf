@@ -436,19 +436,42 @@ window.closeDetail = () => window.switchView(prevView);
 
 document.getElementById('search-input').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 
+let searchQuery = '';
+let searchStartIndex = 0;
+const SEARCH_PAGE_SIZE = 10;
+
 async function doSearch() {
   const q = document.getElementById('search-input').value.trim();
   if(!q) return;
+  searchQuery = q;
+  searchStartIndex = 0;
+  document.getElementById('search-results').innerHTML = '';
+  await fetchResults(true);
+}
+
+async function fetchResults(isNew) {
   const st = document.getElementById('search-status');
   const res = document.getElementById('search-results');
-  st.style.display='block'; st.textContent='검색 중…'; res.innerHTML='';
+  // remove old more-btn if exists
+  const oldBtn = document.getElementById('more-btn');
+  if(oldBtn) oldBtn.remove();
+
+  st.style.display='block';
+  st.textContent = isNew ? '검색 중…' : '불러오는 중…';
+
   try {
-    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=12&key=AIzaSyDsDRQ7zRtUT65sRgwOluJx_e0r4hfMdG4`);
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=${SEARCH_PAGE_SIZE}&startIndex=${searchStartIndex}&key=AIzaSyDsDRQ7zRtUT65sRgwOluJx_e0r4hfMdG4`);
     if(!r.ok){ st.textContent=`오류: ${r.status}`; return; }
     const d = await r.json();
-    if(!d.items||!d.items.length){ st.textContent='검색 결과가 없어요.'; return; }
-    st.textContent=`${d.items.length}권 검색됨`;
-    res.innerHTML = d.items.map(item=>{
+    if(!d.items||!d.items.length){
+      st.textContent = isNew ? '검색 결과가 없어요.' : '더 이상 결과가 없어요.';
+      return;
+    }
+    const total = d.totalItems || 0;
+    searchStartIndex += d.items.length;
+    st.textContent = `전체 약 ${total.toLocaleString()}권 중 ${searchStartIndex}권 표시`;
+
+    const html = d.items.map(item=>{
       const info = item.volumeInfo||{};
       const thumb = (info.imageLinks?.thumbnail||'').replace('http:','https:');
       const title = info.title||'제목 없음';
@@ -470,6 +493,17 @@ async function doSearch() {
         </div>
       </div>`;
     }).join('');
+    res.insertAdjacentHTML('beforeend', html);
+
+    // show more button if more results exist
+    if(searchStartIndex < total) {
+      const btn = document.createElement('button');
+      btn.id = 'more-btn';
+      btn.textContent = `더 보기 (${(total - searchStartIndex).toLocaleString()}권 남음)`;
+      btn.style.cssText = 'width:100%;padding:13px;margin-top:10px;background:none;border:1px solid var(--border2);color:var(--cream2);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px';
+      btn.onclick = () => fetchResults(false);
+      res.after(btn);
+    }
   } catch(e) { st.textContent=`오류: ${e.message}`; }
 }
 window.doSearch = doSearch;
