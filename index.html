@@ -83,6 +83,8 @@ nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width
 
 /* SHELF GRID - 3 columns */
 .shelf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(min-width:600px){.shelf-grid{grid-template-columns:repeat(5,1fr);gap:12px}}
+@media(min-width:900px){.shelf-grid{grid-template-columns:repeat(7,1fr);gap:14px}}
 
 .shelf-card{
   background:var(--card);border:1px solid var(--border);
