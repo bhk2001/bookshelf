@@ -2,12 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1C1410">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="책장">
-<title>책장</title>
+<meta name="apple-mobile-web-app-title" content="Bookshelf">
+<title>Bookshelf</title>
 <style>
 :root{
   --bg:#1C1410;--bg2:#221810;--bg3:#2A1E14;--card:#261A10;
@@ -16,19 +19,19 @@
   --star-on:#E8B568;--red:#C0503A;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--cream);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none}
+html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;overscroll-behavior:none}
 body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
 
 #login-screen{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:24px}
 #login-screen.active{display:flex}
-.login-logo{font-size:48px;font-weight:700;color:var(--cream)}.login-logo em{color:var(--gold);font-style:normal}
+.login-logo{font-size:52px;font-weight:700;color:var(--cream);font-family:"Playfair Display",serif;letter-spacing:-1px}.login-logo em{color:var(--gold);font-style:italic}
 .login-sub{font-size:15px;color:var(--muted);text-align:center;line-height:1.6}
 .google-btn{display:flex;align-items:center;gap:12px;padding:14px 28px;background:var(--cream);color:#1C1410;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
 .google-btn:active{opacity:0.85}
 .google-btn img{width:20px;height:20px}
 
 header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-size:20px;font-weight:700;color:var(--cream)}.logo em{color:var(--gold);font-style:normal}
+.logo{font-size:22px;font-weight:700;color:var(--cream);font-family:"Playfair Display",serif;letter-spacing:-0.3px}.logo em{color:var(--gold);font-style:italic}
 .header-right{display:flex;align-items:center;gap:12px}
 .book-count{font-size:13px;color:var(--muted)}
 .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--gold)}
@@ -143,7 +146,7 @@ nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width
 <div id="loading">불러오는 중...</div>
 
 <div id="login-screen">
-  <div class="login-logo">책<em>장</em></div>
+  <div class="login-logo">Book<em>shelf</em></div>
   <div class="login-sub">읽은 책을 기록하고<br>어디서든 꺼내보세요</div>
   <button class="google-btn" onclick="signIn()">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
@@ -153,7 +156,7 @@ nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width
 
 <div id="app" style="display:none">
   <header>
-    <div class="logo">책<em>장</em></div>
+    <div class="logo">Book<em>shelf</em></div>
     <div class="header-right">
       <div class="book-count" id="hdr-count"></div>
       <div class="user-avatar" id="user-avatar" onclick="signOut()" title="로그아웃"></div>
