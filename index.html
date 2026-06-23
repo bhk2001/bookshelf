@@ -556,15 +556,14 @@ async function fetchResults(isNew) {
         </div>`;
       });
 
+      res.insertAdjacentHTML('beforeend', items.join(''));
       if(searchStartIndex < total) {
         const btn = document.createElement('button');
         btn.id = 'more-btn';
         btn.textContent = `더 보기 (${(total-searchStartIndex).toLocaleString()}권 남음)`;
         btn.style.cssText = 'width:100%;padding:13px;margin-top:10px;background:none;border:1px solid var(--border2);color:var(--cream2);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:16px';
         btn.onclick = () => fetchResults(false);
-        res.insertAdjacentHTML('beforeend', items.join(''));
         res.after(btn);
-        return;
       }
     }
 
